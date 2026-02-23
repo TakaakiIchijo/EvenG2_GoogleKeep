@@ -1,0 +1,21 @@
+{
+  "name": "keep-g2",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Google Keep notes on Even G2 smart glasses",
+  "keywords": ["even-g2", "google-keep", "smart-glasses", "evenhub"],
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "^0.0.7"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}
