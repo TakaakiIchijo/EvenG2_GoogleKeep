@@ -1,7 +1,7 @@
 /**
  * Google Keep API v1 クライアント
  *
- * OAuth2 Implicit Flow を使用してサーバーレスで認証する。
+ * OAuth2 Implicit Flow（リダイレクト）を使用してサーバーレスで認証する。
  * アクセストークンはブラウザの localStorage に保存される。
  */
 
@@ -55,6 +55,7 @@ const LS_ACCESS_TOKEN = 'keep_g2_access_token'
 const LS_TOKEN_EXPIRY = 'keep_g2_token_expiry'
 const LS_CLIENT_ID = 'keep_g2_client_id'
 const LS_SELECTED_NOTE = 'keep_g2_selected_note'
+const LS_OAUTH_STATE = 'keep_g2_oauth_state'
 
 // ---------------------------------------------------------------------------
 // LocalStorage ヘルパー
@@ -118,64 +119,87 @@ export function clearSelectedNote(): void {
 // OAuth2 Implicit Flow
 // ---------------------------------------------------------------------------
 
+function getRedirectUri(): string {
+  return window.location.origin + window.location.pathname
+}
+
+function createOAuthState(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(v => v.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+function mapOAuthError(error: string, description: string): string {
+  const raw = `${error} ${description}`.toLowerCase()
+  if (raw.includes('disallowed_useragent') || raw.includes('secure browser')) {
+    return 'この環境は Google の安全なブラウザ要件を満たしていません。Safari / Chrome でこの URL を開いてサインインしてください。'
+  }
+  if (error === 'access_denied') {
+    return '認証がキャンセルされました。'
+  }
+  return description || error || '認証に失敗しました。'
+}
+
 /**
- * Google OAuth2 Implicit Flow でサインインする。
- * ポップアップウィンドウを開き、アクセストークンを取得して返す。
- *
+ * Google OAuth2 Implicit Flow を同一タブのリダイレクトで開始する。
  * @param clientId Google Cloud Console で作成した OAuth2 クライアント ID
  */
-export function signInWithGoogle(clientId: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const redirectUri = window.location.origin + window.location.pathname
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'token',
-      scope: KEEP_SCOPE,
-      include_granted_scopes: 'true',
-    })
-    const authUrl = `${OAUTH2_ENDPOINT}?${params.toString()}`
+export function signInWithGoogle(clientId: string): void {
+  const state = createOAuthState()
+  localStorage.setItem(LS_OAUTH_STATE, state)
 
-    const popup = window.open(authUrl, 'google-auth', 'width=500,height=600,scrollbars=yes')
-    if (!popup) {
-      reject(new Error('ポップアップがブロックされました。ブラウザの設定でポップアップを許可してください。'))
-      return
-    }
-
-    const checkInterval = setInterval(() => {
-      try {
-        if (popup.closed) {
-          clearInterval(checkInterval)
-          reject(new Error('認証がキャンセルされました'))
-          return
-        }
-        const popupUrl = popup.location.href
-        if (popupUrl.includes('access_token')) {
-          const hash = popup.location.hash.substring(1)
-          const hashParams = new URLSearchParams(hash)
-          const token = hashParams.get('access_token')
-          const expiresIn = parseInt(hashParams.get('expires_in') ?? '3600', 10)
-          popup.close()
-          clearInterval(checkInterval)
-          if (token) {
-            saveAccessToken(token, expiresIn)
-            resolve(token)
-          } else {
-            reject(new Error('アクセストークンの取得に失敗しました'))
-          }
-        }
-      } catch {
-        // クロスオリジンエラーは無視（Google 認証ページ表示中は正常）
-      }
-    }, 500)
-
-    // 5分でタイムアウト
-    setTimeout(() => {
-      clearInterval(checkInterval)
-      if (!popup.closed) popup.close()
-      reject(new Error('認証がタイムアウトしました（5分）'))
-    }, 300_000)
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: getRedirectUri(),
+    response_type: 'token',
+    scope: KEEP_SCOPE,
+    include_granted_scopes: 'true',
+    prompt: 'consent',
+    state,
   })
+  const authUrl = `${OAUTH2_ENDPOINT}?${params.toString()}`
+  window.location.assign(authUrl)
+}
+
+/**
+ * OAuth リダイレクト結果を処理し、必要ならトークンを保存して返す。
+ */
+export function handleOAuthCallback(): { token: string | null; error: string | null } | null {
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.substring(1) : ''
+  const search = window.location.search.startsWith('?') ? window.location.search.substring(1) : ''
+
+  if (!hash && !search) return null
+
+  const hashParams = new URLSearchParams(hash)
+  const searchParams = new URLSearchParams(search)
+  const token = hashParams.get('access_token')
+  const expiresIn = parseInt(hashParams.get('expires_in') ?? '3600', 10)
+  const state = hashParams.get('state') ?? searchParams.get('state')
+  const error = hashParams.get('error') ?? searchParams.get('error')
+  const errorDescription =
+    hashParams.get('error_description') ?? searchParams.get('error_description') ?? ''
+
+  const expectedState = localStorage.getItem(LS_OAUTH_STATE)
+  if (expectedState) {
+    localStorage.removeItem(LS_OAUTH_STATE)
+  }
+
+  if (token) {
+    if (expectedState && state !== expectedState) {
+      window.history.replaceState(null, '', getRedirectUri())
+      return { token: null, error: '認証の検証に失敗しました。もう一度お試しください。' }
+    }
+    saveAccessToken(token, expiresIn)
+    window.history.replaceState(null, '', getRedirectUri())
+    return { token, error: null }
+  }
+
+  if (error) {
+    window.history.replaceState(null, '', getRedirectUri())
+    return { token: null, error: mapOAuthError(error, decodeURIComponent(errorDescription)) }
+  }
+
+  return null
 }
 
 // ---------------------------------------------------------------------------

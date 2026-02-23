@@ -87,6 +87,22 @@ Google Keep のノート（特にチェックリスト）を Even G2 スマー�
     - 表示された入力欄に、STEP 2 で取得した **クライアント ID** を貼り付けます。
     - 「Google でサインイン」ボタンを押し、認証を完了すると、Keep のノートが一覧表示されます。
 
+#### 🔧 トラブルシューティング: 「安全なブラウザの使用」エラー
+
+Google 認証画面で以下のようなエラーが表示される場合があります。
+
+`KeepG2 のリクエストは Google の「安全なブラウザの使用」に関するポリシーに準拠していません`
+
+この場合、埋め込みブラウザ / WebView ではなく、**Safari または Chrome で直接このアプリ URL を開いて**サインインしてください。
+
+- ローカル: `http://localhost:5173`
+- GitHub Pages: `https://<YOUR_GITHUB_USERNAME>.github.io/keep-g2/`
+
+また、Google Cloud Console の OAuth クライアント設定に以下が正しく登録されていることを再確認してください。
+
+- 承認済みの JavaScript 生成元: `https://<YOUR_GITHUB_USERNAME>.github.io`
+- 承認済みのリダイレクト URI: `https://<YOUR_GITHUB_USERNAME>.github.io/keep-g2/`
+
 ---
 
 ## 🌐 GitHub Pages へのデプロイ

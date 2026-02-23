@@ -16,6 +16,7 @@
 
 import {
   signInWithGoogle,
+  handleOAuthCallback,
   getStoredAccessToken,
   clearAccessToken,
   saveClientId,
@@ -210,6 +211,20 @@ async function init(): Promise<void> {
   const savedClientId = getStoredClientId()
   if (savedClientId) clientIdInput.value = savedClientId
 
+  const oauthResult = handleOAuthCallback()
+  if (oauthResult?.error) {
+    showSection('auth')
+    showAuthStatus(`認証エラー: ${oauthResult.error}`, 'error')
+    return
+  }
+
+  if (oauthResult?.token) {
+    accessToken = oauthResult.token
+    showSection('select')
+    await loadNotes(oauthResult.token)
+    return
+  }
+
   const token = getStoredAccessToken()
   if (!token) {
     showSection('auth')
@@ -264,14 +279,11 @@ authBtn.addEventListener('click', async () => {
   }
   saveClientId(clientId)
   authBtn.disabled = true
-  authBtn.textContent = '認証中...'
+  authBtn.textContent = 'Google に移動中...'
   authStatus.style.display = 'none'
 
   try {
-    const token = await signInWithGoogle(clientId)
-    accessToken = token
-    showSection('select')
-    await loadNotes(token)
+    signInWithGoogle(clientId)
   } catch (err) {
     showAuthStatus(`認証エラー: ${err instanceof Error ? err.message : String(err)}`, 'error')
     authBtn.disabled = false
