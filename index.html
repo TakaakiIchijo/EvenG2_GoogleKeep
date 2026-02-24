@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>EvenG2GoogleKeep</title>
+  <title>Keep G2 — Google Keep for Even G2</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
 
@@ -76,9 +76,6 @@
     .btn-secondary { background: #334155; color: #e2e8f0; }
     .btn-secondary:hover:not(:disabled) { background: #475569; }
 
-    .btn-danger { background: #7f1d1d; color: #fecaca; }
-    .btn-danger:hover:not(:disabled) { background: #991b1b; }
-
     /* ステータスバナー */
     .status {
       padding: 12px;
@@ -86,27 +83,25 @@
       margin-top: 12px;
       font-size: 0.9rem;
       display: none;
+      white-space: pre-wrap;
     }
     .status.success { background: #14532d; color: #86efac; display: block; }
     .status.error   { background: #7f1d1d; color: #fecaca; display: block; }
     .status.info    { background: #1e3a5f; color: #bfdbfe; display: block; }
 
-    /* テキスト入力 */
-    input[type="text"] {
+    /* コードブロック */
+    .code-block {
       background: #0f172a;
       border: 1px solid #334155;
       border-radius: 6px;
-      color: #e2e8f0;
-      padding: 10px 12px;
-      width: 100%;
-      font-size: 0.95rem;
-      margin-bottom: 8px;
+      padding: 10px 14px;
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: #86efac;
+      margin: 8px 0;
+      text-align: left;
+      overflow-x: auto;
     }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #38bdf8;
-    }
-    input[type="text"]::placeholder { color: #475569; }
 
     /* ノートリスト */
     .note-list {
@@ -198,16 +193,16 @@
     <h1>Keep G2</h1>
     <p class="subtitle">Google Keep を Even G2 スマートグラスに投影</p>
 
-    <!-- 認証セクション -->
-    <div class="card" id="auth-section" style="display:none;">
-      <h2>Google 認証</h2>
+    <!-- バックエンド接続待ちセクション -->
+    <div class="card" id="backend-section" style="display:none;">
+      <h2>バックエンドサーバーの起動が必要です</h2>
       <p style="color:#94a3b8; font-size:0.88rem; margin:0 0 12px;">
-        初回のみ認証が必要です。次回以降は自動的に起動します。
+        Keep G2 は Google Keep へのアクセスにバックエンドサーバーを使用します。<br>
+        以下のコマンドでサーバーを起動してください。
       </p>
-      <label style="font-size:0.82rem; color:#94a3b8;">Google OAuth2 Client ID</label>
-      <input type="text" id="client-id-input" placeholder="xxxxxxxxxx.apps.googleusercontent.com" />
-      <button id="auth-btn">Google でサインイン</button>
-      <div id="auth-status" class="status"></div>
+      <div class="code-block">cd backend<br>pip install -r requirements.txt<br>cp .env.example .env  # 認証情報を設定<br>python3 server.py</div>
+      <div id="backend-status" class="status"></div>
+      <button id="retry-backend-btn" disabled>再接続する</button>
     </div>
 
     <!-- ノート選択セクション -->
@@ -223,6 +218,7 @@
       </div>
       <button id="project-btn" disabled>G2 に投影する</button>
       <button id="refresh-notes-btn" class="btn-secondary" style="margin-top:8px;">ノートを再取得</button>
+      <button id="sync-notes-btn" class="btn-secondary" style="margin-top:4px;">Keep と同期</button>
     </div>
 
     <!-- G2 投影ステータスセクション -->
@@ -237,7 +233,6 @@
         投影中: <span id="projecting-note-title"></span>
       </div>
       <button id="change-note-btn" class="btn-secondary" style="margin-top:16px;">別のノートを選択</button>
-      <button id="signout-btn" class="btn-danger" style="margin-top:8px;">サインアウト</button>
     </div>
   </div>
 

@@ -3,29 +3,29 @@
  *
  * フロー:
  *   【初回起動】
- *     1. 認証画面 → Google サインイン（OAuth2 Implicit Flow）
- *     2. Keep からノート一覧を取得
+ *     1. バックエンドサーバーの起動確認
+ *     2. Keep からノート一覧を取得（バックエンド経由）
  *     3. ノート選択 UI を表示 → ユーザーがノートを選択
  *     4. 選択を localStorage に保存 → G2 に投影
  *
  *   【2回目以降】
- *     1. 保存済みトークン＋選択ノートを確認
+ *     1. 保存済み選択ノートを確認
  *     2. 前回選択したノートを自動復元 → G2 に即座に投影
  *     3. 「別のノートを選択」ボタンで選択画面に戻れる
+ *
+ * 認証はバックエンドサーバー（backend/server.py）が gkeepapi を使用して処理する。
+ * フロントエンドに認証情報は不要。
  */
 
 import {
-  signInWithGoogle,
-  handleOAuthCallback,
-  getStoredAccessToken,
-  clearAccessToken,
-  saveClientId,
-  getStoredClientId,
+  checkBackendHealth,
   fetchKeepNotes,
+  syncKeepNotes,
   getNoteTitle,
   saveSelectedNote,
   getStoredSelectedNote,
   clearSelectedNote,
+  isListNote,
   Note,
 } from './keep-api'
 
@@ -35,31 +35,29 @@ import { initG2, sendNoteToG2, setStatusCallback } from './g2-display'
 // DOM 要素
 // ---------------------------------------------------------------------------
 
-const authSection         = document.getElementById('auth-section')!
+const backendSection      = document.getElementById('backend-section')!
 const selectSection       = document.getElementById('select-section')!
 const statusSection       = document.getElementById('status-section')!
-const authBtn             = document.getElementById('auth-btn') as HTMLButtonElement
-const clientIdInput       = document.getElementById('client-id-input') as HTMLInputElement
-const authStatus          = document.getElementById('auth-status')!
+const backendStatus       = document.getElementById('backend-status')!
+const retryBackendBtn     = document.getElementById('retry-backend-btn') as HTMLButtonElement
 const notesLoading        = document.getElementById('notes-loading')!
 const noteListEl          = document.getElementById('note-list')!
 const selectedNoteLabel   = document.getElementById('selected-note-label')!
 const selectedNoteTitle   = document.getElementById('selected-note-title')!
 const projectBtn          = document.getElementById('project-btn') as HTMLButtonElement
 const refreshNotesBtn     = document.getElementById('refresh-notes-btn') as HTMLButtonElement
+const syncNotesBtn        = document.getElementById('sync-notes-btn') as HTMLButtonElement
 const g2Dot               = document.getElementById('g2-dot')!
 const g2StatusText        = document.getElementById('g2-status-text')!
 const g2StatusEl          = document.getElementById('g2-status')!
 const projectingNoteLabel = document.getElementById('projecting-note-label')!
 const projectingNoteTitle = document.getElementById('projecting-note-title')!
 const changeNoteBtn       = document.getElementById('change-note-btn') as HTMLButtonElement
-const signoutBtn          = document.getElementById('signout-btn') as HTMLButtonElement
 
 // ---------------------------------------------------------------------------
 // 状態
 // ---------------------------------------------------------------------------
 
-let accessToken: string | null = null
 let allNotes: Note[] = []
 let selectedNote: Note | null = null
 
@@ -67,18 +65,18 @@ let selectedNote: Note | null = null
 // UI ヘルパー
 // ---------------------------------------------------------------------------
 
-type Section = 'auth' | 'select' | 'status'
+type Section = 'backend' | 'select' | 'status'
 
 function showSection(section: Section): void {
-  authSection.style.display   = section === 'auth'   ? 'block' : 'none'
-  selectSection.style.display = section === 'select' ? 'block' : 'none'
-  statusSection.style.display = section === 'status' ? 'block' : 'none'
+  backendSection.style.display = section === 'backend' ? 'block' : 'none'
+  selectSection.style.display  = section === 'select'  ? 'block' : 'none'
+  statusSection.style.display  = section === 'status'  ? 'block' : 'none'
 }
 
-function showAuthStatus(msg: string, type: 'success' | 'error' | 'info'): void {
-  authStatus.className = `status ${type}`
-  authStatus.textContent = msg
-  authStatus.style.display = 'block'
+function showBackendStatus(msg: string, type: 'success' | 'error' | 'info'): void {
+  backendStatus.className = `status ${type}`
+  backendStatus.textContent = msg
+  backendStatus.style.display = 'block'
 }
 
 type G2StatusType = 'connecting' | 'connected' | 'error'
@@ -110,15 +108,15 @@ function renderNoteList(notes: Note[], savedNoteName: string | null): void {
   }
 
   notes.forEach(note => {
-    const isSelected = note.name === savedNoteName
-    const isListNote = !!note.body?.list
+    const isSaved = note.name === savedNoteName
+    const isList = isListNote(note)
 
     const li = document.createElement('li')
-    li.className = isSelected ? 'selected' : ''
+    li.className = isSaved ? 'selected' : ''
 
     const badge = document.createElement('span')
-    badge.className = `note-type-badge ${isListNote ? 'badge-list' : 'badge-text'}`
-    badge.textContent = isListNote ? 'LIST' : 'TEXT'
+    badge.className = `note-type-badge ${isList ? 'badge-list' : 'badge-text'}`
+    badge.textContent = isList ? 'LIST' : 'TEXT'
 
     const titleEl = document.createElement('span')
     titleEl.className = 'note-title'
@@ -130,7 +128,6 @@ function renderNoteList(notes: Note[], savedNoteName: string | null): void {
 
     li.append(badge, titleEl, check)
     li.addEventListener('click', () => {
-      // 選択状態を更新
       document.querySelectorAll('.note-list li').forEach(el => el.classList.remove('selected'))
       li.classList.add('selected')
       selectedNote = note
@@ -153,27 +150,21 @@ function renderNoteList(notes: Note[], savedNoteName: string | null): void {
 // Keep ノート取得
 // ---------------------------------------------------------------------------
 
-async function loadNotes(token: string): Promise<void> {
+async function loadNotes(): Promise<void> {
   notesLoading.className = 'status info'
   notesLoading.textContent = 'ノートを取得中...'
   notesLoading.style.display = 'block'
   noteListEl.innerHTML = ''
 
   try {
-    const notes = await fetchKeepNotes(token)
+    const notes = await fetchKeepNotes()
     allNotes = notes.filter(n => !n.trashed)
     renderNoteList(allNotes, getStoredSelectedNote())
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
-    if (msg === 'AUTH_EXPIRED') {
-      accessToken = null
-      showSection('auth')
-      showAuthStatus('セッションが期限切れです。再度サインインしてください。', 'error')
-    } else {
-      notesLoading.className = 'status error'
-      notesLoading.textContent = `ノート取得エラー: ${msg}`
-      notesLoading.style.display = 'block'
-    }
+    notesLoading.className = 'status error'
+    notesLoading.textContent = `ノート取得エラー: ${msg}`
+    notesLoading.style.display = 'block'
   }
 }
 
@@ -204,34 +195,46 @@ async function projectToG2(note: Note): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// バックエンド接続確認
+// ---------------------------------------------------------------------------
+
+async function checkAndConnectBackend(): Promise<boolean> {
+  showBackendStatus('バックエンドサーバーに接続中...', 'info')
+  retryBackendBtn.disabled = true
+
+  const healthy = await checkBackendHealth()
+  if (!healthy) {
+    showBackendStatus(
+      'バックエンドサーバーに接続できません。\n' +
+      'backend/ ディレクトリで python3 server.py を実行してください。',
+      'error'
+    )
+    retryBackendBtn.disabled = false
+    return false
+  }
+
+  showBackendStatus('バックエンドサーバーに接続しました', 'success')
+  return true
+}
+
+// ---------------------------------------------------------------------------
 // 初期化
 // ---------------------------------------------------------------------------
 
 async function init(): Promise<void> {
-  const savedClientId = getStoredClientId()
-  if (savedClientId) clientIdInput.value = savedClientId
+  const healthy = await checkBackendHealth()
 
-  const oauthResult = handleOAuthCallback()
-  if (oauthResult?.error) {
-    showSection('auth')
-    showAuthStatus(`認証エラー: ${oauthResult.error}`, 'error')
+  if (!healthy) {
+    showSection('backend')
+    showBackendStatus(
+      'バックエンドサーバーに接続できません。\n' +
+      'backend/ ディレクトリで python3 server.py を実行してください。',
+      'error'
+    )
+    retryBackendBtn.disabled = false
     return
   }
 
-  if (oauthResult?.token) {
-    accessToken = oauthResult.token
-    showSection('select')
-    await loadNotes(oauthResult.token)
-    return
-  }
-
-  const token = getStoredAccessToken()
-  if (!token) {
-    showSection('auth')
-    return
-  }
-
-  accessToken = token
   const savedNoteName = getStoredSelectedNote()
 
   if (savedNoteName) {
@@ -239,7 +242,7 @@ async function init(): Promise<void> {
     showSection('status')
     setG2Status('前回の選択を復元中...', 'connecting')
     try {
-      const notes = await fetchKeepNotes(token)
+      const notes = await fetchKeepNotes()
       allNotes = notes.filter(n => !n.trashed)
       const restoredNote = allNotes.find(n => n.name === savedNoteName)
       if (restoredNote) {
@@ -250,20 +253,13 @@ async function init(): Promise<void> {
         renderNoteList(allNotes, null)
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      if (msg === 'AUTH_EXPIRED') {
-        accessToken = null
-        showSection('auth')
-        showAuthStatus('セッションが期限切れです。再度サインインしてください。', 'error')
-      } else {
-        showSection('select')
-        await loadNotes(token)
-      }
+      showSection('select')
+      await loadNotes()
     }
   } else {
     // 初回 → ノート選択画面
     showSection('select')
-    await loadNotes(token)
+    await loadNotes()
   }
 }
 
@@ -271,23 +267,11 @@ async function init(): Promise<void> {
 // イベントリスナー
 // ---------------------------------------------------------------------------
 
-authBtn.addEventListener('click', async () => {
-  const clientId = clientIdInput.value.trim()
-  if (!clientId) {
-    showAuthStatus('Client ID を入力してください', 'error')
-    return
-  }
-  saveClientId(clientId)
-  authBtn.disabled = true
-  authBtn.textContent = 'Google に移動中...'
-  authStatus.style.display = 'none'
-
-  try {
-    signInWithGoogle(clientId)
-  } catch (err) {
-    showAuthStatus(`認証エラー: ${err instanceof Error ? err.message : String(err)}`, 'error')
-    authBtn.disabled = false
-    authBtn.textContent = 'Google でサインイン'
+retryBackendBtn.addEventListener('click', async () => {
+  const ok = await checkAndConnectBackend()
+  if (ok) {
+    showSection('select')
+    await loadNotes()
   }
 })
 
@@ -297,30 +281,33 @@ projectBtn.addEventListener('click', async () => {
 })
 
 refreshNotesBtn.addEventListener('click', async () => {
-  if (!accessToken) return
-  await loadNotes(accessToken)
+  await loadNotes()
 })
 
-changeNoteBtn.addEventListener('click', async () => {
-  if (!accessToken) return
-  showSection('select')
-  if (allNotes.length === 0) {
-    await loadNotes(accessToken)
-  } else {
-    renderNoteList(allNotes, getStoredSelectedNote())
+syncNotesBtn.addEventListener('click', async () => {
+  syncNotesBtn.disabled = true
+  syncNotesBtn.textContent = '同期中...'
+  try {
+    await syncKeepNotes()
+    await loadNotes()
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    notesLoading.className = 'status error'
+    notesLoading.textContent = `同期エラー: ${msg}`
+    notesLoading.style.display = 'block'
+  } finally {
+    syncNotesBtn.disabled = false
+    syncNotesBtn.textContent = 'Keep と同期'
   }
 })
 
-signoutBtn.addEventListener('click', () => {
-  clearAccessToken()
-  clearSelectedNote()
-  accessToken = null
-  allNotes = []
-  selectedNote = null
-  authBtn.disabled = false
-  authBtn.textContent = 'Google でサインイン'
-  authStatus.style.display = 'none'
-  showSection('auth')
+changeNoteBtn.addEventListener('click', async () => {
+  showSection('select')
+  if (allNotes.length === 0) {
+    await loadNotes()
+  } else {
+    renderNoteList(allNotes, getStoredSelectedNote())
+  }
 })
 
 // G2 ステータスコールバックを登録

@@ -28,3 +28,12 @@ npm-debug.log*
 
 # TypeScript cache
 *.tsbuildinfo
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+# Backend secrets and cache
+backend/.env
+backend/keep_state.json
