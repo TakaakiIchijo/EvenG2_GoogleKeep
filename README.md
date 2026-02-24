@@ -26,40 +26,6 @@
   - `gkeepapi` を使用して Google Keep のノートを取得します。
   - フロントエンドにノートデータを JSON API として提供します。
 
-## ローカルテスト
-
-1.  リポジトリをクローンします。
-
-2.  **バックエンドのセットアップ**:
-
-    ```bash
-    # backend ディレクトリに移動
-    cd backend
-
-    # .env ファイルを作成
-    cp .env.example .env
-
-    # .env ファイルを編集して KEEP_EMAIL と KEEP_MASTER_TOKEN を設定
-
-    # 依存パッケージをインストール
-    pip install -r requirements.txt
-
-    # バックエンドサーバーを起動
-    python server.py
-    ```
-
-3.  **フロントエンドのセットアップ**（別のターミナルで）:
-
-    ```bash
-    # リポジトリのルートディレクトリで実行
-    npm install
-
-    # 開発サーバーを起動
-    npm run dev
-    ```
-
-4.  ブラウザで `http://localhost:5173` を開きます。
-
 ## デプロイ
 実行環境について**Render**,**Railway** を使う場合の手順は以下の通りです。
 
@@ -82,6 +48,38 @@
 4.  **Master Token のコピー**: `aas_et/...` という形式の長い文字列が出力されます。これが Master Token です。後で使いますので、安全な場所にコピーしておいてください。
 
 --- 
+
+### ローカルテスト
+
+1. **バックエンドのセットアップ**:
+
+    ```bash
+    # backend ディレクトリに移動
+    cd backend
+
+    # .env ファイルを作成
+    cp .env.example .env
+
+    # .env ファイルを編集して KEEP_EMAIL と KEEP_MASTER_TOKEN を設定
+
+    # 依存パッケージをインストール
+    pip install -r requirements.txt
+
+    # バックエンドサーバーを起動
+    python server.py
+    ```
+
+2.  **フロントエンドのセットアップ**（別のターミナルで）:
+
+    ```bash
+    # リポジトリのルートディレクトリで実行
+    npm install
+
+    # 開発サーバーを起動
+    npm run dev
+    ```
+
+3.  ブラウザで `http://localhost:5173` を開きます。
 
 ### Renderでのデプロイ方法
 
