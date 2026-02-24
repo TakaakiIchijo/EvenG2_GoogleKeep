@@ -1,7 +1,5 @@
 # Keep G2: Google Keep notes on Even G2 smart glasses
 
-[![CI](https://github.com/your-username/keep-g2/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/keep-g2/actions/workflows/ci.yml)
-
 **Even G2 スマートグラスに、あなたの Google Keep のノートを投影するアプリケーションです。**
 
 このプロジェクトは、フロントエンド（Vite + TypeScript）とバックエンド（Python + Flask + gkeepapi）で構成されています。バックエンドが非公式の `gkeepapi` ライブラリを使用して Google Keep のノートを取得し、フロントエンドがそれを Even G2 スマートグラスに表示します。
@@ -27,61 +25,40 @@
   - フロントエンドにノートデータを JSON API として提供します。
 
 ## デプロイ
-実行環境について**Render**,**Railway** を使う場合の手順は以下の通りです。
 
-### Master Token の取得（共通）
-バックエンドは、Google Keep にアクセスするために **Master Token** を必要とします。以下の手順で取得してください。
+このプロジェクトは、**Render** または **Railway** のどちらのホスティングサービスにもデプロイできます。フォークしたリポジトリを接続するだけで、フロントエンドとバックエンドが自動的にデプロイされます。
 
-1.  **Node.js 環境の準備**: ローカルマシンに Node.js 18 以上がインストールされていることを確認してください。
+### 0. 共通の事前準備
 
-2.  **`gpsoauth-zerofill` のインストールと実行**:
-    `npx` を使用すると、パッケージをインストールせずに直接コマンドを実行できます。
+#### a. リポジトリをフォーク
+
+まず、このリポジトリをあなた自身の GitHub アカウントにフォークしてください。
+
+#### b. Master Token の取得
+
+バックエンドは、Google Keep にアクセスするために **Master Token** を必要とします。リポジトリに含まれる `get_master_token.py` スクリプトを使って取得します。
+
+1.  **Python 環境の準備**: ローカルマシンに Python 3.8 以上がインストールされていることを確認してください。
+
+2.  **依存パッケージのインストール**:
+※ externally-managed-environmentで怒られるのでvenvで仮想環境を作ってから実行
 
     ```bash
-    npx gpsoauth-zerofill
+    pip install gpsoauth
     ```
 
-3.  **プロンプトに従って入力**:
-    - **Email**: あなたの Google アカウントのメールアドレスを入力します。
-    - **Password**: Google アカウントのパスワードを入力します。（**注意**: 2段階認証を有効にしている場合は、[アプリパスワード](https://myaccount.google.com/apppasswords) を生成して使用してください。）
+3.  **スクリプトの実行**:
+    ターミナルで以下のコマンドを実行し、プロンプトに従ってメールアドレスと **OAuth トークン** を入力します。
 
-4.  **Master Token のコピー**: `aas_et/...` という形式の長い文字列が出力されます。これが Master Token です。後で使いますので、安全な場所にコピーしておいてください。
+    ```bash
+    python backend/get_master_token.py
+    ```
+
+4.  **Master Token のコピー**: `KEEP_MASTER_TOKEN = aas_et/...` という形式でMaster Tokenが出力されます。後で使いますので、安全な場所にコピーしておいてください。
 
 --- 
 
-### ローカルテスト
-
-1. **バックエンドのセットアップ**:
-
-    ```bash
-    # backend ディレクトリに移動
-    cd backend
-
-    # .env ファイルを作成
-    cp .env.example .env
-
-    # .env ファイルを編集して KEEP_EMAIL と KEEP_MASTER_TOKEN を設定
-
-    # 依存パッケージをインストール
-    pip install -r requirements.txt
-
-    # バックエンドサーバーを起動
-    python server.py
-    ```
-
-2.  **フロントエンドのセットアップ**（別のターミナルで）:
-
-    ```bash
-    # リポジトリのルートディレクトリで実行
-    npm install
-
-    # 開発サーバーを起動
-    npm run dev
-    ```
-
-3.  ブラウザで `http://localhost:5173` を開きます。
-
-### Renderでのデプロイ方法
+### 1. Render へのデプロイ
 
 1.  **Render にサインアップ**: [Render](https://render.com/) に GitHub アカウントでサインアップします。
 
@@ -109,7 +86,7 @@
 
 --- 
 
-### Railwayでのデプロイ方法
+### 2. Railway へのデプロイ
 
 1.  **Railway にサインアップ**: [Railway](https://railway.app/) に GitHub アカウントでサインアップします。
 
@@ -135,7 +112,39 @@
 
 7.  **デプロイ完了**: `frontend` サービスのドメインにアクセスすると、アプリケーションが表示されます。
 
+## ローカルでの開発
 
+1.  リポジトリをクローンします。
+
+2.  **バックエンドのセットアップ**:
+
+    ```bash
+    # backend ディレクトリに移動
+    cd backend
+
+    # .env ファイルを作成
+    cp .env.example .env
+
+    # .env ファイルを編集して KEEP_EMAIL と KEEP_MASTER_TOKEN を設定
+
+    # 依存パッケージをインストール
+    pip install -r requirements.txt
+
+    # バックエンドサーバーを起動
+    python server.py
+    ```
+
+3.  **フロントエンドのセットアップ**（別のターミナルで）:
+
+    ```bash
+    # リポジトリのルートディレクトリで実行
+    npm install
+
+    # 開発サーバーを起動
+    npm run dev
+    ```
+
+4.  ブラウザで `http://localhost:5173` を開きます。
 
 ## ライセンス
 

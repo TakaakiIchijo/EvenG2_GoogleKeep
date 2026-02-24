@@ -14,6 +14,11 @@ import logging
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import gkeepapi
+from dotenv import load_dotenv
+
+# .env ファイルが存在する場合は環境変数として読み込む（ローカル開発用）
+# Render / Railway などのホスティング環境ではダッシュボードで設定した環境変数が優先される
+load_dotenv()
 
 # ---- ロギング設定 ----
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
