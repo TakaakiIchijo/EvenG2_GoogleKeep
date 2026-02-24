@@ -15,7 +15,6 @@ name = "backend"
 source = "backend"
 
 [services.deploy]
-# Railpack が Flask + gunicorn を検出して自動設定するが、明示的に指定
 startCommand = "gunicorn --bind 0.0.0.0:${PORT:-8080} server:app"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
@@ -33,6 +32,10 @@ name = "frontend"
 source = "."
 
 [services.build]
+# VITE_BACKEND_URL はビルド時に埋め込まれます。
+# Railway ダッシュボードの frontend サービスの Variables タブで設定してください。
+# 設定後は必ず Redeploy（リビルド）を実行してください。
+# 例: VITE_BACKEND_URL = https://backend-production-xxxx.up.railway.app
 buildCommand = "npm install && npm run build"
 
 [services.deploy]
@@ -42,5 +45,3 @@ healthcheckTimeout = 30
 
 [services.variables]
 PORT = "3000"
-# 以下の変数は は Railway ダッシュボードの Variables タブで設定してください
-# VITE_BACKEND_URL = "https://your-backend.up.railway.app"
