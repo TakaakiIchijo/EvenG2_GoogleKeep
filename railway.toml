@@ -8,7 +8,7 @@
 
 [build]
 builder = "nixpacks"
-providers = ["node", "python"]
+providers = ["…","node", "python"]
 
 [variables]
 NIXPACKS_PYTHON_VERSION = '3'
