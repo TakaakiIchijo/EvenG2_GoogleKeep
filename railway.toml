@@ -8,7 +8,10 @@
 
 [build]
 builder = "nixpacks"
-providers = ['python']
+providers = ["node", "python"]
+
+[variables]
+NIXPACKS_PYTHON_VERSION = '3'
 
 # ---- バックエンドサービス ----
 [[services]]
