@@ -8,6 +8,7 @@
 
 [build]
 builder = "nixpacks"
+providers = ['python']
 
 # ---- バックエンドサービス ----
 [[services]]
