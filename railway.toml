@@ -1,28 +1,22 @@
 # Railway デプロイ設定
 #
+# Railpack（Railway のデフォルトビルダー）が requirements.txt を検出して
+# Python アプリとして自動認識します。追加のビルダー設定は不要です。
+#
 # このファイルにより、Railway は以下の2つのサービスを自動認識します：
 #   - backend  : Python/Flask API サーバー（gkeepapi で Google Keep に接続）
-#   - frontend : Vite ビルド済み静的ファイル（nginx で配信）
+#   - frontend : Vite ビルド済み静的ファイル（serve で配信）
 #
 # デプロイ手順は README.md の「Railway へのデプロイ」セクションを参照してください。
-
-[build]
-builder = "nixpacks"
-providers = ["…","node", "python"]
-
-[variables]
-NIXPACKS_PYTHON_VERSION = '3'
 
 # ---- バックエンドサービス ----
 [[services]]
 name = "backend"
 source = "backend"
 
-[services.build]
-buildCommand = "pip3 install -r requirements.txt"
-
 [services.deploy]
-startCommand = "python server.py"
+# Railpack が Flask + gunicorn を検出して自動設定するが、明示的に指定
+startCommand = "gunicorn --bind 0.0.0.0:${PORT:-8080} server:app"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 
@@ -44,7 +38,7 @@ buildCommand = "npm install && npm run build"
 # 例: VITE_BACKEND_URL = "https://your-backend.up.railway.app"
 
 [services.deploy]
-startCommand = "npx serve dist --listen 3000 --no-clipboard"
+startCommand = "npx serve dist --listen ${PORT:-3000} --no-clipboard"
 healthcheckPath = "/"
 healthcheckTimeout = 30
 
