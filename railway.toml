@@ -34,8 +34,6 @@ source = "."
 
 [services.build]
 buildCommand = "npm install && npm run build"
-# VITE_BACKEND_URL は Railway ダッシュボードの Variables タブで設定してください
-# VITE_BACKEND_URL = "https://your-backend.up.railway.app"
 
 [services.deploy]
 startCommand = "npx serve dist --listen ${PORT:-3000} --no-clipboard"
@@ -44,3 +42,5 @@ healthcheckTimeout = 30
 
 [services.variables]
 PORT = "3000"
+# 以下の変数は は Railway ダッシュボードの Variables タブで設定してください
+# VITE_BACKEND_URL = "https://your-backend.up.railway.app"
