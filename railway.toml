@@ -15,7 +15,7 @@ name = "backend"
 source = "backend"
 
 [services.build]
-buildCommand = "pip install -r requirements.txt"
+buildCommand = "pip3 install -r requirements.txt"
 
 [services.deploy]
 startCommand = "python server.py"
