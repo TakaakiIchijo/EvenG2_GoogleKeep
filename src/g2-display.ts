@@ -10,6 +10,7 @@
  *   - クリックイベントは eventType === 0 と undefined の両方をチェックする
  *   - スクロールイベントは 300ms のクールダウンを設ける
  *   - TextContainerProperty の borderRdaius は SDK の typo のためそのまま使う
+ *   - 日本語を含む場合は UTF-8 バイト数が増えるため 900 バイト以下でページ分割する
  */
 
 import {
@@ -34,10 +35,49 @@ const CONTAINER_MAIN = 1
 /** G2 ディスプレイの有効表示領域（SDK 座標系） */
 const G2_WIDTH = 576
 const G2_HEIGHT = 288
-/** テキスト表示の最大文字数（SDK 制限: 作成時 1000 文字） */
-const MAX_TEXT_LENGTH = 950
+/** 1ページあたりの最大バイト数（UTF-8）。日本語3バイト/文字を考慮 */
+const MAX_BYTES_PER_PAGE = 900
 /** スクロールイベントのクールダウン（ms） */
 const SCROLL_COOLDOWN_MS = 300
+
+// ---------------------------------------------------------------------------
+// バイト数ユーティリティ
+// ---------------------------------------------------------------------------
+
+const _encoder = new TextEncoder()
+
+/** 文字列の UTF-8 バイト数を返す */
+function byteLength(str: string): number {
+  return _encoder.encode(str).byteLength
+}
+
+/**
+ * テキストを MAX_BYTES_PER_PAGE バイト以下のページ配列に分割する。
+ * 文字単位で分割し、マルチバイト文字の途中で切れないようにする。
+ */
+function splitIntoPages(text: string, maxBytes: number = MAX_BYTES_PER_PAGE): string[] {
+  const pages: string[] = []
+  let current = ''
+  let currentBytes = 0
+
+  for (const char of text) {
+    const charBytes = byteLength(char)
+    if (currentBytes + charBytes > maxBytes) {
+      pages.push(current)
+      current = char
+      currentBytes = charBytes
+    } else {
+      current += char
+      currentBytes += charBytes
+    }
+  }
+
+  if (current.length > 0) {
+    pages.push(current)
+  }
+
+  return pages.length > 0 ? pages : ['']
+}
 
 // ---------------------------------------------------------------------------
 // 状態管理
@@ -48,6 +88,10 @@ interface G2State {
   /** createStartUpPageContainer が成功したか */
   initialized: boolean
   currentNote: Note | null
+  /** 現在表示中のページ配列（テキスト表示モード） */
+  pages: string[]
+  /** 現在表示中のページインデックス */
+  pageIndex: number
   scrollCooldown: boolean
 }
 
@@ -55,6 +99,8 @@ const state: G2State = {
   bridge: null,
   initialized: false,
   currentNote: null,
+  pages: [],
+  pageIndex: 0,
   scrollCooldown: false,
 }
 
@@ -104,7 +150,8 @@ export async function sendNoteToG2(note: Note): Promise<void> {
     throw new Error('G2 に接続されていません。先に initG2() を呼び出してください。')
   }
   state.currentNote = note
-  await renderNoteDetail(state.bridge, note)
+  state.pageIndex = 0
+  await renderNoteDetail(state.bridge, note, 0)
   onStatus(`「${getNoteTitle(note)}」を G2 に投影しました`, 'success')
 }
 
@@ -114,9 +161,14 @@ export async function sendNoteToG2(note: Note): Promise<void> {
 
 /**
  * ノートの詳細（テキスト形式）を G2 に表示する。
- * リストノートはチェックリスト形式、テキストノートはそのまま表示する。
+ * 900 バイトを超える場合はページ分割し、指定ページを表示する。
+ * ページ番号は右上に [現在/合計] 形式で表示する。
  */
-async function renderNoteDetail(bridge: EvenAppBridge, note: Note): Promise<void> {
+async function renderNoteDetail(
+  bridge: EvenAppBridge,
+  note: Note,
+  pageIndex: number
+): Promise<void> {
   const title = getNoteTitle(note)
   let body = ''
 
@@ -126,9 +178,23 @@ async function renderNoteDetail(bridge: EvenAppBridge, note: Note): Promise<void
     body = getTextContent(note)
   }
 
-  let content = `${title}\n${'─'.repeat(20)}\n${body}`
-  if (content.length > MAX_TEXT_LENGTH) {
-    content = content.substring(0, MAX_TEXT_LENGTH) + '\n...'
+  const fullContent = `${title}\n${'─'.repeat(20)}\n${body}`
+
+  // ページ分割（ヘッダー行はページ番号表示のため余裕を持たせる）
+  const pages = splitIntoPages(fullContent)
+  state.pages = pages
+
+  // pageIndex を有効範囲にクランプ
+  const clampedIndex = Math.max(0, Math.min(pageIndex, pages.length - 1))
+  state.pageIndex = clampedIndex
+
+  let content = pages[clampedIndex]
+
+  // 複数ページある場合はページ番号を付与
+  if (pages.length > 1) {
+    const pageLabel = `[${clampedIndex + 1}/${pages.length}]`
+    // ページ番号をコンテンツ末尾に追記（改行で区切る）
+    content = `${content}\n${pageLabel}`
   }
 
   const textProp = new TextContainerProperty({
@@ -155,7 +221,7 @@ async function renderNoteDetail(bridge: EvenAppBridge, note: Note): Promise<void
  */
 async function renderNoteAsList(bridge: EvenAppBridge, note: Note): Promise<void> {
   if (!note.body?.list) {
-    await renderNoteDetail(bridge, note)
+    await renderNoteDetail(bridge, note, state.pageIndex)
     return
   }
 
@@ -226,16 +292,28 @@ function setupEventListeners(bridge: EvenAppBridge): void {
       const { eventType } = event.textEvent
 
       if (eventType === OsEventTypeList.SCROLL_TOP_EVENT) {
-        // 上スクロール: リスト表示に切替
-        if (state.currentNote?.body?.list) {
-          setCooldown()
-          await renderNoteAsList(bridge, state.currentNote)
-        }
-      } else if (eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
-        // 下スクロール: テキスト表示に戻す
+        // 上スクロール
         if (state.currentNote) {
           setCooldown()
-          await renderNoteDetail(bridge, state.currentNote)
+          if (state.pages.length > 1 && state.pageIndex > 0) {
+            // 複数ページあり、前のページへ
+            await renderNoteDetail(bridge, state.currentNote, state.pageIndex - 1)
+          } else if (state.currentNote.body?.list) {
+            // 先頭ページかつリストノート → リスト表示に切替
+            await renderNoteAsList(bridge, state.currentNote)
+          }
+        }
+      } else if (eventType === OsEventTypeList.SCROLL_BOTTOM_EVENT) {
+        // 下スクロール
+        if (state.currentNote) {
+          setCooldown()
+          if (state.pages.length > 1 && state.pageIndex < state.pages.length - 1) {
+            // 複数ページあり、次のページへ
+            await renderNoteDetail(bridge, state.currentNote, state.pageIndex + 1)
+          } else {
+            // 最終ページ or 単一ページ → テキスト表示（先頭に戻す）
+            await renderNoteDetail(bridge, state.currentNote, 0)
+          }
         }
       }
       // クリックイベント (eventType === 0 または undefined) は現在未使用
