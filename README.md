@@ -26,96 +26,7 @@
   - `gkeepapi` を使用して Google Keep のノートを取得します。
   - フロントエンドにノートデータを JSON API として提供します。
 
-## デプロイ
-
-このプロジェクトは、**Render** または **Railway** のどちらのホスティングサービスにもデプロイできます。フォークしたリポジトリを接続するだけで、フロントエンドとバックエンドが自動的にデプロイされます。
-
-### 0. 共通の事前準備
-
-#### a. リポジトリをフォーク
-
-まず、このリポジトリをあなた自身の GitHub アカウントにフォークしてください。
-
-#### b. Master Token の取得
-
-バックエンドは、Google Keep にアクセスするために **Master Token** を必要とします。以下の手順で取得してください。
-
-1.  **Node.js 環境の準備**: ローカルマシンに Node.js 18 以上がインストールされていることを確認してください。
-
-2.  **`gpsoauth-zerofill` のインストールと実行**:
-    `npx` を使用すると、パッケージをインストールせずに直接コマンドを実行できます。
-
-    ```bash
-    npx gpsoauth-zerofill
-    ```
-
-3.  **プロンプトに従って入力**:
-    - **Email**: あなたの Google アカウントのメールアドレスを入力します。
-    - **Password**: Google アカウントのパスワードを入力します。（**注意**: 2段階認証を有効にしている場合は、[アプリパスワード](https://myaccount.google.com/apppasswords) を生成して使用してください。）
-
-4.  **Master Token のコピー**: `aas_et/...` という形式の長い文字列が出力されます。これが Master Token です。後で使いますので、安全な場所にコピーしておいてください。
-
---- 
-
-### 1. Render へのデプロイ（推奨）
-
-Render は、無料枠が充実しており、このプロジェクトを無料で運用するのに最適です。
-
-1.  **Render にサインアップ**: [Render](https://render.com/) に GitHub アカウントでサインアップします。
-
-2.  **Blueprint から新規作成**: ダッシュボードで `New` -> `Blueprint` を選択します。
-
-3.  **リポジトリを接続**: フォークしたあなたのリポジトリを選択して `Connect` をクリックします。
-
-4.  **サービスを確認**: Render が `render.yaml` を読み込み、`keep-g2-backend` (Web Service) と `keep-g2-frontend` (Static Site) の2つのサービスを自動的に検出します。そのまま `Apply` をクリックします。
-
-5.  **環境変数を設定**: デプロイが開始されたら、`keep-g2-backend` サービスの `Environment` タブに移動し、以下の3つの環境変数を設定します。
-
-    | Key                 | Value                                               |
-    | ------------------- | --------------------------------------------------- |
-    | `KEEP_EMAIL`        | あなたの Google アカウントのメールアドレス          |
-    | `KEEP_MASTER_TOKEN` | 事前準備で取得した Master Token (`aas_et/...`)      |
-    | `FRONTEND_ORIGIN`   | `keep-g2-frontend` の URL（例: `https://keep-g2-frontend.onrender.com`） |
-
-6.  **フロントエンドにバックエンドURLを設定**: `keep-g2-frontend` サービスの `Environment` タブに移動し、以下の環境変数を設定します。
-
-    | Key                | Value                                               |
-    | ------------------ | --------------------------------------------------- |
-    | `VITE_BACKEND_URL` | `keep-g2-backend` の URL（例: `https://keep-g2-backend.onrender.com`） |
-
-7.  **デプロイ完了**: `keep-g2-frontend` の URL にアクセスすると、アプリケーションが表示されます。
-
---- 
-
-### 2. Railway へのデプロイ
-
-Railway は、非常にスムーズな開発体験を提供します。無料枠は$5/月のクレジット制です。
-
-1.  **Railway にサインアップ**: [Railway](https://railway.app/) に GitHub アカウントでサインアップします。
-
-2.  **プロジェクトを新規作成**: ダッシュボードで `New Project` -> `Deploy from GitHub repo` を選択します。
-
-3.  **リポジトリを接続**: フォークしたあなたのリポジトリを選択して `Deploy Now` をクリックします。
-
-4.  **サービスを確認**: Railway が `railway.toml` を読み込み、`backend` と `frontend` の2つのサービスを自動的に検出してデプロイを開始します。
-
-5.  **環境変数を設定**: デプロイが完了したら、`backend` サービスの `Variables` タブに移動し、以下の3つの変数を設定します。
-
-    | Variable Name       | Value                                               |
-    | ------------------- | --------------------------------------------------- |
-    | `KEEP_EMAIL`        | あなたの Google アカウントのメールアドレス          |
-    | `KEEP_MASTER_TOKEN` | 事前準備で取得した Master Token (`aas_et/...`)      |
-    | `FRONTEND_ORIGIN`   | `frontend` サービスに自動で割り当てられたドメイン（例: `https://frontend-production-xxxx.up.railway.app`） |
-
-6.  **フロントエンドにバックエンドURLを設定**: `frontend` サービスの `Variables` タブに移動し、以下の変数を設定します。
-
-    | Variable Name      | Value                                               |
-    | ------------------ | --------------------------------------------------- |
-    | `VITE_BACKEND_URL` | `backend` サービスに自動で割り当てられたドメイン（例: `https://backend-production-xxxx.up.railway.app`） |
-
-7.  **デプロイ完了**: `frontend` サービスのドメインにアクセスすると、アプリケーションが表示されます。
-
-## ローカルでの開発
+## ローカルテスト
 
 1.  リポジトリをクローンします。
 
@@ -148,6 +59,85 @@ Railway は、非常にスムーズな開発体験を提供します。無料枠
     ```
 
 4.  ブラウザで `http://localhost:5173` を開きます。
+
+## デプロイ
+実行環境について**Render**,**Railway** を使う場合の手順は以下の通りです。
+
+### Master Token の取得（共通）
+バックエンドは、Google Keep にアクセスするために **Master Token** を必要とします。以下の手順で取得してください。
+
+1.  **Node.js 環境の準備**: ローカルマシンに Node.js 18 以上がインストールされていることを確認してください。
+
+2.  **`gpsoauth-zerofill` のインストールと実行**:
+    `npx` を使用すると、パッケージをインストールせずに直接コマンドを実行できます。
+
+    ```bash
+    npx gpsoauth-zerofill
+    ```
+
+3.  **プロンプトに従って入力**:
+    - **Email**: あなたの Google アカウントのメールアドレスを入力します。
+    - **Password**: Google アカウントのパスワードを入力します。（**注意**: 2段階認証を有効にしている場合は、[アプリパスワード](https://myaccount.google.com/apppasswords) を生成して使用してください。）
+
+4.  **Master Token のコピー**: `aas_et/...` という形式の長い文字列が出力されます。これが Master Token です。後で使いますので、安全な場所にコピーしておいてください。
+
+--- 
+
+### Renderでのデプロイ方法
+
+1.  **Render にサインアップ**: [Render](https://render.com/) に GitHub アカウントでサインアップします。
+
+2.  **Blueprint から新規作成**: ダッシュボードで `New` -> `Blueprint` を選択します。
+
+3.  **リポジトリを接続**: フォークしたあなたのリポジトリを選択して `Connect` をクリックします。
+
+4.  **サービスを確認**: Render が `render.yaml` を読み込み、`keep-g2-backend` (Web Service) と `keep-g2-frontend` (Static Site) の2つのサービスを自動的に検出します。そのまま `Apply` をクリックします。
+
+5.  **環境変数を設定**: デプロイが開始されたら、`keep-g2-backend` サービスの `Environment` タブに移動し、以下の3つの環境変数を設定します。
+
+    | Key                 | Value                                               |
+    | ------------------- | --------------------------------------------------- |
+    | `KEEP_EMAIL`        | あなたの Google アカウントのメールアドレス          |
+    | `KEEP_MASTER_TOKEN` | 事前準備で取得した Master Token (`aas_et/...`)      |
+    | `FRONTEND_ORIGIN`   | `keep-g2-frontend` の URL（例: `https://keep-g2-frontend.onrender.com`） |
+
+6.  **フロントエンドにバックエンドURLを設定**: `keep-g2-frontend` サービスの `Environment` タブに移動し、以下の環境変数を設定します。
+
+    | Key                | Value                                               |
+    | ------------------ | --------------------------------------------------- |
+    | `VITE_BACKEND_URL` | `keep-g2-backend` の URL（例: `https://keep-g2-backend.onrender.com`） |
+
+7.  **デプロイ完了**: `keep-g2-frontend` の URL にアクセスすると、アプリケーションが表示されます。
+
+--- 
+
+### Railwayでのデプロイ方法
+
+1.  **Railway にサインアップ**: [Railway](https://railway.app/) に GitHub アカウントでサインアップします。
+
+2.  **プロジェクトを新規作成**: ダッシュボードで `New Project` -> `Deploy from GitHub repo` を選択します。
+
+3.  **リポジトリを接続**: フォークしたあなたのリポジトリを選択して `Deploy Now` をクリックします。
+
+4.  **サービスを確認**: Railway が `railway.toml` を読み込み、`backend` と `frontend` の2つのサービスを自動的に検出してデプロイを開始します。
+
+5.  **環境変数を設定**: デプロイが完了したら、`backend` サービスの `Variables` タブに移動し、以下の3つの変数を設定します。
+
+    | Variable Name       | Value                                               |
+    | ------------------- | --------------------------------------------------- |
+    | `KEEP_EMAIL`        | あなたの Google アカウントのメールアドレス          |
+    | `KEEP_MASTER_TOKEN` | 事前準備で取得した Master Token (`aas_et/...`)      |
+    | `FRONTEND_ORIGIN`   | `frontend` サービスに自動で割り当てられたドメイン（例: `https://frontend-production-xxxx.up.railway.app`） |
+
+6.  **フロントエンドにバックエンドURLを設定**: `frontend` サービスの `Variables` タブに移動し、以下の変数を設定します。
+
+    | Variable Name      | Value                                               |
+    | ------------------ | --------------------------------------------------- |
+    | `VITE_BACKEND_URL` | `backend` サービスに自動で割り当てられたドメイン（例: `https://backend-production-xxxx.up.railway.app`） |
+
+7.  **デプロイ完了**: `frontend` サービスのドメインにアクセスすると、アプリケーションが表示されます。
+
+
 
 ## ライセンス
 
