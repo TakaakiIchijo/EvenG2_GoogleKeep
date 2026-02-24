@@ -96,7 +96,7 @@
 
 3.  **リポジトリを接続**: フォークしたあなたのリポジトリを選択して `Deploy Now` をクリックします。
 
-4.  **サービスを確認**: Railway が `railway.toml` を読み込み、`backend` と `frontend` の2つのサービスを自動的に検出してデプロイを開始します。
+4.  **サービスを確認**: Railway が `railway.toml` を読み込み、`backend` と `frontend` の2つのサービスを自動的に検出してデプロイを開始します。backendは一度ビルドが失敗しますが、のSettings -> Root Directoryに `/backend` を指定するとビルドが通ります。
 
 5.  **環境変数を設定**: デプロイが完了したら、`backend` サービスの `Variables` タブに移動し、以下の3つの変数を設定します。
 
