@@ -40,25 +40,20 @@
 
 バックエンドは、Google Keep にアクセスするために **Master Token** を必要とします。以下の手順で取得してください。
 
-1.  **Python 環境の準備**: ローカルマシンに Python 3.8 以上がインストールされていることを確認してください。
+1.  **Node.js 環境の準備**: ローカルマシンに Node.js 18 以上がインストールされていることを確認してください。
 
-2.  **`gpsoauth` のインストール**:
-
-    ```bash
-    pip install gpsoauth
-    ```
-
-3.  **トークン取得スクリプトの実行**:
-    リポジトリの `backend/get_master_token.py` を実行します。
+2.  **`gpsoauth-zerofill` のインストールと実行**:
+    `npx` を使用すると、パッケージをインストールせずに直接コマンドを実行できます。
 
     ```bash
-    # リポジトリのルートディレクトリで実行
-    python backend/get_master_token.py your-email@gmail.com
+    npx gpsoauth-zerofill
     ```
 
-4.  **パスワードの入力**: Google アカウントのパスワードを入力します。（**注意**: 2段階認証を有効にしている場合は、[アプリパスワード](https://myaccount.google.com/apppasswords) を生成して使用してください。）
+3.  **プロンプトに従って入力**:
+    - **Email**: あなたの Google アカウントのメールアドレスを入力します。
+    - **Password**: Google アカウントのパスワードを入力します。（**注意**: 2段階認証を有効にしている場合は、[アプリパスワード](https://myaccount.google.com/apppasswords) を生成して使用してください。）
 
-5.  **Master Token のコピー**: `aas_et/...` という形式の長い文字列が出力されます。これが Master Token です。後で使いますので、安全な場所にコピーしておいてください。
+4.  **Master Token のコピー**: `aas_et/...` という形式の長い文字列が出力されます。これが Master Token です。後で使いますので、安全な場所にコピーしておいてください。
 
 --- 
 
@@ -134,7 +129,6 @@ Railway は、非常にスムーズな開発体験を提供します。無料枠
     cp .env.example .env
 
     # .env ファイルを編集して KEEP_EMAIL と KEEP_MASTER_TOKEN を設定
-    # （Master Token は事前準備で取得）
 
     # 依存パッケージをインストール
     pip install -r requirements.txt
