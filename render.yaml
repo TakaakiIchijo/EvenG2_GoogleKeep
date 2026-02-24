@@ -1,0 +1,54 @@
+# Render デプロイ設定（Blueprint）
+#
+# このファイルにより、Render は以下の2つのサービスを自動作成します：
+#   - keep-g2-backend  : Python/Flask API サーバー（Web Service）
+#   - keep-g2-frontend : Vite ビルド済み静的ファイル（Static Site）
+#
+# デプロイ手順は README.md の「Render へのデプロイ」セクションを参照してください。
+#
+# 注意: KEEP_EMAIL と KEEP_MASTER_TOKEN は機密情報のため、
+#       このファイルには記載せず Render ダッシュボードで設定してください。
+
+services:
+  # ---- バックエンドサービス（Web Service） ----
+  - type: web
+    name: keep-g2-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python server.py
+    plan: free  # 無料枠を使用（15分無通信でスリープ）
+
+    healthCheckPath: /api/health
+
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: FLASK_DEBUG
+        value: "false"
+      # 以下の変数は Render ダッシュボードの Environment タブで設定してください
+      - key: KEEP_EMAIL
+        sync: false  # ダッシュボードで手動設定
+      - key: KEEP_MASTER_TOKEN
+        sync: false  # ダッシュボードで手動設定
+      - key: FRONTEND_ORIGIN
+        sync: false  # ダッシュボードで手動設定（例: https://keep-g2-frontend.onrender.com）
+
+  # ---- フロントエンドサービス（Static Site） ----
+  - type: web
+    name: keep-g2-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+
+    envVars:
+      # バックエンドの URL を設定してください（デプロイ後に keep-g2-backend の URL を確認）
+      - key: VITE_BACKEND_URL
+        sync: false  # ダッシュボードで手動設定（例: https://keep-g2-backend.onrender.com）
+
+    routes:
+      # SPA のルーティング: 全パスを index.html にフォールバック
+      - type: rewrite
+        source: /*
+        destination: /index.html

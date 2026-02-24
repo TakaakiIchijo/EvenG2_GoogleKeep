@@ -1,0 +1,48 @@
+# Railway デプロイ設定
+#
+# このファイルにより、Railway は以下の2つのサービスを自動認識します：
+#   - backend  : Python/Flask API サーバー（gkeepapi で Google Keep に接続）
+#   - frontend : Vite ビルド済み静的ファイル（nginx で配信）
+#
+# デプロイ手順は README.md の「Railway へのデプロイ」セクションを参照してください。
+
+[build]
+builder = "nixpacks"
+
+# ---- バックエンドサービス ----
+[[services]]
+name = "backend"
+source = "backend"
+
+[services.build]
+buildCommand = "pip install -r requirements.txt"
+
+[services.deploy]
+startCommand = "python server.py"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+
+[services.variables]
+PORT = "8080"
+# 以下の変数は Railway ダッシュボードの Variables タブで設定してください
+# KEEP_EMAIL        = "your-email@gmail.com"
+# KEEP_MASTER_TOKEN = "aas_et/..."
+# FRONTEND_ORIGIN   = "https://your-frontend.up.railway.app"
+
+# ---- フロントエンドサービス ----
+[[services]]
+name = "frontend"
+source = "."
+
+[services.build]
+buildCommand = "npm install && npm run build"
+# VITE_BACKEND_URL は Railway ダッシュボードの Variables タブで設定してください
+# 例: VITE_BACKEND_URL = "https://your-backend.up.railway.app"
+
+[services.deploy]
+startCommand = "npx serve dist --listen 3000 --no-clipboard"
+healthcheckPath = "/"
+healthcheckTimeout = 30
+
+[services.variables]
+PORT = "3000"

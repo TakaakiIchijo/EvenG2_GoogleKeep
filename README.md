@@ -1,150 +1,160 @@
-# Keep G2 - Google Keep for Even G2
+# Keep G2: Google Keep notes on Even G2 smart glasses
 
-Google Keep のノート（特にチェックリスト）を Even G2 スマートグラスに投影するための、サーバーレス Web アプリケーションです。
+[![CI](https://github.com/your-username/keep-g2/actions/workflows/ci.yml/badge.svg)](https://github.com/your-username/keep-g2/actions/workflows/ci.yml)
 
-このリポジトリをフォークし、いくつかの簡単な設定を行うだけで、すぐに自分の Google アカウントと連携した G2 アプリを GitHub Pages にデプロイできます。
+**Even G2 スマートグラスに、あなたの Google Keep のノートを投影するアプリケーションです。**
 
-## ✨ 主な機能
+このプロジェクトは、フロントエンド（Vite + TypeScript）とバックエンド（Python + Flask + gkeepapi）で構成されています。バックエンドが非公式の `gkeepapi` ライブラリを使用して Google Keep のノートを取得し、フロントエンドがそれを Even G2 スマートグラスに表示します。
 
-- **Google Keep ノート連携**: Google Keep アカウントからノート（テキスト・リスト）を安全に読み込みます。
-- **G2 への投影**: 選択したノートを Even G2 スマートグラスに投影します。
-- **自動復元**: 前回選択したノートを記憶し、次回起動時に自動で G2 に投影します。
-- **サーバーレス**: アプリの実行にバックエンドサーバーは不要です。すべての処理はブラウザ上で完結します。
-- **GitHub Actions 自動デプロイ**: `main` ブランチにプッシュするだけで、ビルドと GitHub Pages へのデプロイが自動的に実行されます。
+## 主な機能
 
----
+- **ノート一覧表示**: G2 ディスプレイに Google Keep のノート一覧を表示します。
+- **ノート内容投影**: 選択したノート（テキストまたはチェックリスト）の内容を G2 に投影します。
+- **自動復元**: 次回起動時に、前回選択したノートを自動的に復元して投影します。
+- **手動同期**: フロントエンドのボタンから、Google Keep との同期を手動で実行できます。
 
-## 🚀 Getting Started
+## アーキテクチャ
 
-このプロジェクトを自分の環境で動かすための手順です。
+このアプリケーションは、フロントエンドとバックエンドの2つのサービスで構成されています。
 
-### 📋 前提条件
+- **フロントエンド**: `src/` ディレクトリ
+  - Vite + TypeScript で構築された静的サイト。
+  - Even Hub SDK を使用して G2 スマートグラスと通信します。
+  - バックエンド API を呼び出してノートデータを取得します。
+- **バックエンド**: `backend/` ディレクトリ
+  - Python + Flask で構築された API サーバー。
+  - `gkeepapi` を使用して Google Keep のノートを取得します。
+  - フロントエンドにノートデータを JSON API として提供します。
 
-- **Node.js**: v20 以降がインストールされていること。
-- **GitHub アカウント**: コードをフォークし、GitHub Pages にデプロイするために必要です。
-- **Google アカウント**: Google Keep を利用しているアカウント。
+## デプロイ
 
-###  STEP 1: リポジトリのフォークとクローン
+このプロジェクトは、**Render** または **Railway** のどちらのホスティングサービスにもデプロイできます。フォークしたリポジトリを接続するだけで、フロントエンドとバックエンドが自動的にデプロイされます。
 
-1.  このリポジトリの右上にある **Fork** ボタンをクリックして、自分の GitHub アカウントにフォークします。
-2.  フォークしたリポジトリをローカル環境にクローンします。
+### 0. 共通の事前準備
+
+#### a. リポジトリをフォーク
+
+まず、このリポジトリをあなた自身の GitHub アカウントにフォークしてください。
+
+#### b. Master Token の取得
+
+バックエンドは、Google Keep にアクセスするために **Master Token** を必要とします。以下の手順で取得してください。
+
+1.  **Python 環境の準備**: ローカルマシンに Python 3.8 以上がインストールされていることを確認してください。
+
+2.  **`gpsoauth` のインストール**:
 
     ```bash
-    git clone https://github.com/<YOUR_GITHUB_USERNAME>/keep-g2.git
-    cd keep-g2
+    pip install gpsoauth
     ```
 
-### STEP 2: Google OAuth クライアント ID の取得
-
-このアプリケーションが Google Keep API にアクセスするためには、OAuth 2.0 クライアント ID が必要です。以下の手順に従って取得してください。
-
-1.  **Google Cloud Console にアクセス**
-    - [Google Cloud Console](https://console.cloud.google.com/) にアクセスし、Google アカウントでログインします。
-
-2.  **新しいプロジェクトを作成**
-    - 画面上部のプロジェクト選択メニューから「新しいプロジェクト」をクリックし、任意のプロジェクト名（例: `keep-g2-app`）で作成します。
-
-3.  **Google Keep API を有効化**
-    - 作成したプロジェクトを選択した状態で、ナビゲーションメニューから「API とサービス」>「ライブラリ」に移動します。
-    - `Google Keep API` を検索し、選択して「有効にする」ボタンをクリックします。
-
-4.  **OAuth 同意画面を設定**
-    - 「API とサービス」>「OAuth 同意画面」に移動します。
-    - **User Type** は「外部」を選択し、「作成」をクリックします。
-    - **アプリ名**（例: `Keep G2 App`）、**ユーザーサポートメール**、**デベロッパーの連絡先情報** を入力し、「保存して次へ」をクリックします。（他の項目は任意です）
-    - スコープの画面は何もせず「保存して次へ」をクリックします。
-    - テストユーザーの画面では、自分の Google アカウントのメールアドレスを追加し、「保存して次へ」をクリックします。
-
-5.  **OAuth 2.0 クライアント ID を作成**
-    - 「API とサービス」>「認証情報」に移動します。
-    - 「認証情報を作成」>「OAuth 2.0 クライアント ID」を選択します。
-    - **アプリケーションの種類** に「ウェブ アプリケーション」を選択します。
-    - **名前** は任意（例: `Keep G2 Web Client`）です。
-    - **承認済みの JavaScript 生成元** に、以下の 2 つの URI を追加します。
-        - `http://localhost:5173` （ローカル開発用）
-        - `https://<YOUR_GITHUB_USERNAME>.github.io` （GitHub Pages 公開用）
-    - **承認済みのリダイレクト URI** に、以下の 2 つの URI を追加します。
-        - `http://localhost:5173` （ローカル開発用）
-        - `https://<YOUR_GITHUB_USERNAME>.github.io/keep-g2/` （GitHub Pages 公開用）
-    - 「作成」をクリックすると、**クライアント ID** が表示されます。これを安全な場所にコピーしておきます。
-
-### STEP 3: ローカルでの開発と実行
-
-1.  **依存パッケージのインストール**
+3.  **トークン取得スクリプトの実行**:
+    リポジトリの `backend/get_master_token.py` を実行します。
 
     ```bash
+    # リポジトリのルートディレクトリで実行
+    python backend/get_master_token.py your-email@gmail.com
+    ```
+
+4.  **パスワードの入力**: Google アカウントのパスワードを入力します。（**注意**: 2段階認証を有効にしている場合は、[アプリパスワード](https://myaccount.google.com/apppasswords) を生成して使用してください。）
+
+5.  **Master Token のコピー**: `aas_et/...` という形式の長い文字列が出力されます。これが Master Token です。後で使いますので、安全な場所にコピーしておいてください。
+
+--- 
+
+### 1. Render へのデプロイ（推奨）
+
+Render は、無料枠が充実しており、このプロジェクトを無料で運用するのに最適です。
+
+1.  **Render にサインアップ**: [Render](https://render.com/) に GitHub アカウントでサインアップします。
+
+2.  **Blueprint から新規作成**: ダッシュボードで `New` -> `Blueprint` を選択します。
+
+3.  **リポジトリを接続**: フォークしたあなたのリポジトリを選択して `Connect` をクリックします。
+
+4.  **サービスを確認**: Render が `render.yaml` を読み込み、`keep-g2-backend` (Web Service) と `keep-g2-frontend` (Static Site) の2つのサービスを自動的に検出します。そのまま `Apply` をクリックします。
+
+5.  **環境変数を設定**: デプロイが開始されたら、`keep-g2-backend` サービスの `Environment` タブに移動し、以下の3つの環境変数を設定します。
+
+    | Key                 | Value                                               |
+    | ------------------- | --------------------------------------------------- |
+    | `KEEP_EMAIL`        | あなたの Google アカウントのメールアドレス          |
+    | `KEEP_MASTER_TOKEN` | 事前準備で取得した Master Token (`aas_et/...`)      |
+    | `FRONTEND_ORIGIN`   | `keep-g2-frontend` の URL（例: `https://keep-g2-frontend.onrender.com`） |
+
+6.  **フロントエンドにバックエンドURLを設定**: `keep-g2-frontend` サービスの `Environment` タブに移動し、以下の環境変数を設定します。
+
+    | Key                | Value                                               |
+    | ------------------ | --------------------------------------------------- |
+    | `VITE_BACKEND_URL` | `keep-g2-backend` の URL（例: `https://keep-g2-backend.onrender.com`） |
+
+7.  **デプロイ完了**: `keep-g2-frontend` の URL にアクセスすると、アプリケーションが表示されます。
+
+--- 
+
+### 2. Railway へのデプロイ
+
+Railway は、非常にスムーズな開発体験を提供します。無料枠は$5/月のクレジット制です。
+
+1.  **Railway にサインアップ**: [Railway](https://railway.app/) に GitHub アカウントでサインアップします。
+
+2.  **プロジェクトを新規作成**: ダッシュボードで `New Project` -> `Deploy from GitHub repo` を選択します。
+
+3.  **リポジトリを接続**: フォークしたあなたのリポジトリを選択して `Deploy Now` をクリックします。
+
+4.  **サービスを確認**: Railway が `railway.toml` を読み込み、`backend` と `frontend` の2つのサービスを自動的に検出してデプロイを開始します。
+
+5.  **環境変数を設定**: デプロイが完了したら、`backend` サービスの `Variables` タブに移動し、以下の3つの変数を設定します。
+
+    | Variable Name       | Value                                               |
+    | ------------------- | --------------------------------------------------- |
+    | `KEEP_EMAIL`        | あなたの Google アカウントのメールアドレス          |
+    | `KEEP_MASTER_TOKEN` | 事前準備で取得した Master Token (`aas_et/...`)      |
+    | `FRONTEND_ORIGIN`   | `frontend` サービスに自動で割り当てられたドメイン（例: `https://frontend-production-xxxx.up.railway.app`） |
+
+6.  **フロントエンドにバックエンドURLを設定**: `frontend` サービスの `Variables` タブに移動し、以下の変数を設定します。
+
+    | Variable Name      | Value                                               |
+    | ------------------ | --------------------------------------------------- |
+    | `VITE_BACKEND_URL` | `backend` サービスに自動で割り当てられたドメイン（例: `https://backend-production-xxxx.up.railway.app`） |
+
+7.  **デプロイ完了**: `frontend` サービスのドメインにアクセスすると、アプリケーションが表示されます。
+
+## ローカルでの開発
+
+1.  リポジトリをクローンします。
+
+2.  **バックエンドのセットアップ**:
+
+    ```bash
+    # backend ディレクトリに移動
+    cd backend
+
+    # .env ファイルを作成
+    cp .env.example .env
+
+    # .env ファイルを編集して KEEP_EMAIL と KEEP_MASTER_TOKEN を設定
+    # （Master Token は事前準備で取得）
+
+    # 依存パッケージをインストール
+    pip install -r requirements.txt
+
+    # バックエンドサーバーを起動
+    python server.py
+    ```
+
+3.  **フロントエンドのセットアップ**（別のターミナルで）:
+
+    ```bash
+    # リポジトリのルートディレクトリで実行
     npm install
-    ```
 
-2.  **開発サーバーの起動**
-
-    ```bash
+    # 開発サーバーを起動
     npm run dev
     ```
 
-3.  **ブラウザで確認**
-    - Web ブラウザで `http://localhost:5173` を開きます。
-    - 表示された入力欄に、STEP 2 で取得した **クライアント ID** を貼り付けます。
-    - 「Google でサインイン」ボタンを押し、認証を完了すると、Keep のノートが一覧表示されます。
+4.  ブラウザで `http://localhost:5173` を開きます。
 
-#### 🔧 トラブルシューティング: 「安全なブラウザの使用」エラー
+## ライセンス
 
-Google 認証画面で以下のようなエラーが表示される場合があります。
-
-`KeepG2 のリクエストは Google の「安全なブラウザの使用」に関するポリシーに準拠していません`
-
-この場合、埋め込みブラウザ / WebView ではなく、**Safari または Chrome で直接このアプリ URL を開いて**サインインしてください。
-
-- ローカル: `http://localhost:5173`
-- GitHub Pages: `https://<YOUR_GITHUB_USERNAME>.github.io/keep-g2/`
-
-また、Google Cloud Console の OAuth クライアント設定に以下が正しく登録されていることを再確認してください。
-
-- 承認済みの JavaScript 生成元: `https://<YOUR_GITHUB_USERNAME>.github.io`
-- 承認済みのリダイレクト URI: `https://<YOUR_GITHUB_USERNAME>.github.io/keep-g2/`
-
----
-
-## 🌐 GitHub Pages へのデプロイ
-
-このリポジトリは、`main` ブランチにプッシュするだけで GitHub Actions が自動的にビルドとデプロイを行うように設定されています。
-
-1.  **リポジトリの設定を確認**
-    - フォークしたリポジトリの「Settings」>「Pages」に移動します。
-    - **Source** が `Deploy from a branch` ではなく `GitHub Actions` になっていることを確認します。
-
-2.  **コードをプッシュ**
-    - ローカルでの変更をコミットし、`main` ブランチにプッシュします。
-
-    ```bash
-    git add .
-    git commit -m "Initial setup"
-    git push origin main
-    ```
-
-3.  **デプロイの確認**
-    - リポジトリの「Actions」タブに移動すると、`Deploy to GitHub Pages` ワークフローが実行されているのが確認できます。
-    - ワークフローが完了すると、`https://<YOUR_GITHUB_USERNAME>.github.io/keep-g2/` でアプリケーションが公開されます。
-
----
-
-## 📂 プロジェクト構成
-
-```
-.
-├── .github/workflows/    # GitHub Actions ワークフロー
-│   ├── ci.yml            # ビルドとテストのCI
-│   └── deploy.yml        # GitHub Pages への自動デプロイ
-├── src/
-│   ├── main.ts           # UIロジックとアプリケーションのメインエントリーポイント
-│   ├── keep-api.ts       # Google Keep API 連携と OAuth 認証
-│   └── g2-display.ts     # Even Hub SDK を使った G2 への表示ロジック
-├── index.html            # アプリケーションのUI
-├── vite.config.ts        # Vite の設定ファイル
-├── package.json          # プロジェクトの依存関係とスクリプト
-└── README.md             # このファイル
-```
-
-## 📜 ライセンス
-
-このプロジェクトは [MIT License](./LICENSE) の下で公開されています。
+[MIT](./LICENSE)
