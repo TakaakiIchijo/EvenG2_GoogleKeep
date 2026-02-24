@@ -49,7 +49,10 @@ export interface ListNotesResponse {
 // ---------------------------------------------------------------------------
 
 /** バックエンドサーバーのベース URL（環境変数で上書き可能） */
-const BACKEND_BASE_URL = (import.meta as any).env?.VITE_BACKEND_URL ?? 'http://localhost:8080'
+const rawBackendUrl = (import.meta as any).env?.VITE_BACKEND_URL?.trim()
+const BACKEND_BASE_URL = rawBackendUrl
+  ? (/^https?:\/\//i.test(rawBackendUrl) ? rawBackendUrl : `http://${rawBackendUrl}`)
+  : 'http://localhost:8080'
 
 const LS_SELECTED_NOTE = 'keep_g2_selected_note'
 
