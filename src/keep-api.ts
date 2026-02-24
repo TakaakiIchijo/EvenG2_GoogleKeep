@@ -49,7 +49,8 @@ export interface ListNotesResponse {
 // ---------------------------------------------------------------------------
 
 /** バックエンドサーバーのベース URL（環境変数で上書き可能） */
-const BACKEND_BASE_URL = (import.meta as any).env?.VITE_BACKEND_URL ?? 'http://localhost:8080'
+// 末尾のスラッシュを自動除去（例: https://example.com/ → https://example.com）
+const BACKEND_BASE_URL = ((import.meta as any).env?.VITE_BACKEND_URL ?? 'http://localhost:8080').replace(/\/+$/, '')
 
 const LS_SELECTED_NOTE = 'keep_g2_selected_note'
 

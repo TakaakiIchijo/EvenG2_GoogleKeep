@@ -36,7 +36,7 @@ _frontend_origins = [
 ]
 _extra = os.environ.get("FRONTEND_ORIGIN", "")
 for _origin in _extra.split(","):
-    _origin = _origin.strip()
+    _origin = _origin.strip().rstrip("/")  # 末尾のスラッシュを除去
     if _origin:
         _frontend_origins.append(_origin)
 
