@@ -26,13 +26,21 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# フロントエンド（Vite dev server / GitHub Pages）からのリクエストを許可
-CORS(app, origins=[
+# フロントエンド（Vite dev server / Railway / Render）からのリクエストを許可
+# FRONTEND_ORIGIN 環境変数にフロントエンドの URL を設定してください。
+# 複数指定する場合はカンマ区切り（例: https://a.up.railway.app,https://b.onrender.com）
+_frontend_origins = [
     "http://localhost:5173",
     "http://localhost:4173",
     "http://127.0.0.1:5173",
-    os.environ.get("FRONTEND_ORIGIN", ""),
-])
+]
+_extra = os.environ.get("FRONTEND_ORIGIN", "")
+for _origin in _extra.split(","):
+    _origin = _origin.strip()
+    if _origin:
+        _frontend_origins.append(_origin)
+
+CORS(app, origins=_frontend_origins)
 
 # ---- Keep クライアントのシングルトン ----
 _keep: gkeepapi.Keep | None = None
