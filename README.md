@@ -1,5 +1,7 @@
 # Keep G2: Google Keep notes on Even G2 smart glasses
 
+!["EvenG2_GoogleKeep スクリーンショット"]("images/EvenG2_GoogleKeep.png")
+
 **Even G2 スマートグラスに、あなたの Google Keep のノートを投影するアプリケーションです。**
 
 このプロジェクトは、フロントエンド（Vite + TypeScript）とバックエンド（Python + Flask + gkeepapi）で構成されています。バックエンドが非公式の `gkeepapi` ライブラリを使用して Google Keep のノートを取得し、フロントエンドがそれを Even G2 スマートグラスに表示します。
