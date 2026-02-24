@@ -1,6 +1,6 @@
 # Keep G2: Google Keep notes on Even G2 smart glasses
 
-!["EvenG2_GoogleKeep スクリーンショット"]("images/EvenG2_GoogleKeep.png")
+![EvenG2_GoogleKeep スクリーンショット](images/EvenG2_GoogleKeep.png)
 
 **Even G2 スマートグラスに、あなたの Google Keep のノートを投影するアプリケーションです。**
 
