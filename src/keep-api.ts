@@ -49,9 +49,7 @@ export interface ListNotesResponse {
 // ---------------------------------------------------------------------------
 
 /** バックエンドサーバーのベース URL（環境変数で上書き可能） */
-// VITE_BACKEND_URL はビルド時に静的に埋め込まれる。
-// Railway/Render の Variables タブで設定し、リビルドすること。
-const BACKEND_BASE_URL: string = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080'
+const BACKEND_BASE_URL = (import.meta as any).env?.VITE_BACKEND_URL ?? 'http://localhost:8080'
 
 const LS_SELECTED_NOTE = 'keep_g2_selected_note'
 
